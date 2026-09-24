@@ -1,4 +1,4 @@
-from app import app
+from run import app
 from app.models.produto import db, Produto
 
 
