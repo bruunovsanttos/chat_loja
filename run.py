@@ -1,6 +1,7 @@
 from flask import Flask
 from config import Config
 from app.models.produto import db
+from app.routes.chat_routes import chat_bp
 
 
 def create_app():
@@ -13,6 +14,7 @@ def create_app():
     app.config.from_object(Config)
 
     db.init_app(app)
+    app.register_blueprint(chat_bp)
 
     with app.app_context():
         db.create_all()

@@ -28,8 +28,14 @@ def definir_ferramenta(nome, descricao, recebe_nome=True):
             "parameters": {
                 "type": "object",
                 "properties": (
-                    {"nome": {"type": "string", "minLength": 1}}
-                    if recebe_nome else {}
+                    {
+                        "nome": {
+                            "type": "string",
+                            "minLength": 1,
+                        }
+                    }
+                    if recebe_nome
+                    else {}
                 ),
                 "required": ["nome"] if recebe_nome else [],
                 "additionalProperties": False,
@@ -71,6 +77,7 @@ def executar_ferramenta(nome, argumentos):
     if nome == "listar_produtos":
         if argumentos:
             return {"erro": "Esta ferramenta não recebe argumentos."}
+
         return funcoes[nome]()
 
     produto = argumentos.get("nome")
@@ -113,7 +120,11 @@ class IAService:
 
         chave = config.get("OPENROUTER_API_KEY")
 
-        if not chave or chave.strip() == "sua_chave_openrouter_aqui":
+        if (
+            not isinstance(chave, str)
+            or not chave.strip()
+            or chave.strip() == "sua_chave_openrouter_aqui"
+        ):
             raise ValueError(
                 "Configure OPENROUTER_API_KEY no .env do projeto."
             )
@@ -127,7 +138,7 @@ class IAService:
 
         try:
             with OpenAI(
-                api_key=chave,
+                api_key=chave.strip(),
                 base_url="https://openrouter.ai/api/v1",
                 timeout=45.0,
                 max_retries=1,
@@ -135,13 +146,18 @@ class IAService:
                 for _ in range(5):
                     resposta = client.chat.completions.create(
                         model=config.get(
-                            "OPENROUTER_MODEL", "openrouter/free"
+                            "OPENROUTER_MODEL",
+                            "openrouter/free",
                         ),
                         messages=mensagens,
                         tools=TOOLS,
-                        tool_choice="auto" if consultou else "required",
+                        tool_choice=(
+                            "auto" if consultou else "required"
+                        ),
                         extra_body={
-                            "provider": {"require_parameters": True}
+                            "provider": {
+                                "require_parameters": True,
+                            }
                         },
                     )
 
@@ -162,9 +178,11 @@ class IAService:
                         if (
                             escolha.finish_reason != "stop"
                             or not mensagem_ia.content
+                            or not mensagem_ia.content.strip()
                         ):
                             raise RuntimeError(
-                                "Resposta incompleta. Tente novamente."
+                                "OpenRouter retornou uma resposta "
+                                "incompleta ou vazia. Tente novamente."
                             )
 
                         return mensagem_ia.content.strip()
@@ -178,10 +196,14 @@ class IAService:
                             argumentos = json.loads(
                                 chamada.function.arguments
                             )
+
                         except (ValueError, TypeError):
                             resultado = {
-                                "erro": "JSON inválido. Corrija a chamada."
+                                "erro": (
+                                    "JSON inválido. Corrija a chamada."
+                                )
                             }
+
                         else:
                             resultado = executar_ferramenta(
                                 chamada.function.name,
@@ -198,15 +220,19 @@ class IAService:
                             "role": "tool",
                             "tool_call_id": chamada.id,
                             "content": json.dumps(
-                                resultado, ensure_ascii=False
+                                resultado,
+                                ensure_ascii=False,
                             ),
                         })
 
-        except APIError:
+        except APIError as exc:
+            tipo = type(exc).__name__
+            status = getattr(exc, "status_code", None)
+
             raise RuntimeError(
-                "Não foi possível consultar o OpenRouter. "
-                "Verifique a chave, a conexão e os limites "
-                "do serviço gratuito."
+                f"Falha no OpenRouter: {tipo}; "
+                f"status HTTP: "
+                f"{status if status is not None else 'indisponível'}."
             ) from None
 
         raise RuntimeError(
