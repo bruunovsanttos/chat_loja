@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Loja — Assistente de compras</title>
+
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/style.css') }}"
+  >
+
+  <script
+    src="{{ url_for('static', filename='js/chat.js') }}"
+    defer
+  ></script>
+</head>
+
+<body>
+  <div class="pagina">
+    <header class="topo">
+      <a
+        class="marca"
+        href="{{ url_for('chat.index') }}"
+        aria-label="Loja, início"
+      >
+        <span class="simbolo" aria-hidden="true"></span>
+        loja<span class="ponto">.</span>
+      </a>
+
+      <span class="topo-legenda">
+        SEU ASSISTENTE DE COMPRAS
+      </span>
+    </header>
+
+    <main class="layout">
+      <section class="apresentacao" aria-labelledby="titulo">
+        <p class="sobretitulo">
+          <span aria-hidden="true"></span>
+          VAMOS CONVERSAR
+        </p>
+
+        <h1 id="titulo">
+          Tecnologia,<br>
+          sem dúvidas<span>.</span>
+        </h1>
+
+        <p class="descricao">
+          Descubra nossos produtos, consulte preços
+          e veja o que está disponível.
+        </p>
+
+        <div class="assuntos">
+          <span>Estoque</span>
+          <span>Preços</span>
+          <span>Catálogo</span>
+        </div>
+
+        <div class="nota">
+          <span class="nota-icone" aria-hidden="true">↗</span>
+
+          <p>
+            Você escolhe como conversar.<br>
+
+            <span>
+              Use as opções do chat ou escreva sua pergunta
+              sobre um produto.
+            </span>
+          </p>
+        </div>
+      </section>
+
+      <section class="painel" aria-label="Chat da loja">
+        <div class="painel-topo">
+          <div class="avatar" aria-hidden="true">L·</div>
+
+          <div>
+            <h2>Assistente da loja</h2>
+            <p>Como podemos ajudar?</p>
+          </div>
+
+          <button id="nova-conversa" type="button">
+            Nova conversa
+          </button>
+        </div>
+
+        <div
+          id="mensagens"
+          class="mensagens"
+          role="log"
+          aria-label="Conversa"
+          aria-live="polite"
+          aria-relevant="additions text"
+          tabindex="0"
+        >
+          <article class="mensagem assistente">
+            <span class="autor">LOJA</span>
+
+            <div class="balao">
+              <p>Olá! Que bom ter você aqui.</p>
+              <p>Escolha uma opção abaixo ou escreva sua pergunta.</p>
+            </div>
+          </article>
+        </div>
+
+        <nav
+          id="menu"
+          class="sugestoes"
+          aria-label="O que você deseja consultar?"
+        >
+          <button type="button" data-acao="catalogo">
+            Ver produtos
+          </button>
+
+          <button type="button" data-acao="preco">
+            Consultar preço
+          </button>
+
+          <button type="button" data-acao="estoque">
+            Consultar estoque
+          </button>
+        </nav>
+
+        <section
+          id="selecao"
+          class="selecao"
+          aria-labelledby="titulo-selecao"
+          hidden
+        >
+          <div class="selecao-topo">
+            <h3 id="titulo-selecao" tabindex="-1">
+              Escolha um produto
+            </h3>
+
+            <button id="voltar" type="button">
+              Voltar
+            </button>
+          </div>
+
+          <div id="lista-produtos" class="lista-produtos"></div>
+        </section>
+
+        <p id="status" class="status" role="status"></p>
+
+        <form
+          id="form-chat"
+          data-url="{{ url_for('chat.chat') }}"
+          data-produtos-url="{{ url_for('chat.produtos') }}"
+        >
+          <label for="mensagem">Sua mensagem</label>
+
+          <div class="compositor">
+            <textarea
+              id="mensagem"
+              name="mensagem"
+              rows="2"
+              maxlength="2000"
+              required
+              placeholder="Como podemos ajudar?"
+              aria-describedby="dica"
+            ></textarea>
+
+            <button
+              id="enviar"
+              type="submit"
+              aria-label="Enviar mensagem"
+            >
+              <span aria-hidden="true">↑</span>
+            </button>
+          </div>
+
+          <div class="rodape-form">
+            <small id="dica">
+              Enter envia · Shift + Enter pula linha
+            </small>
+
+            <span id="contador" aria-hidden="true">
+              0/2000
+            </span>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <footer class="rodape">
+      <span>Uma conversa. Mais clareza para escolher.</span>
+
+      <span class="assinatura" aria-hidden="true">
+        <i></i>
+        <i></i>
+        <i></i>
+      </span>
+    </footer>
+  </div>
+</body>
+</html>
