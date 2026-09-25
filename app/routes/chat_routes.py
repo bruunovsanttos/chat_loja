@@ -1,9 +1,51 @@
-from flask import Blueprint, current_app, jsonify, request
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+    render_template,
+    request,
+)
 
-from app.service.ia_service import IAService
+from app.service.ia_service import IAService, validar_historico
+from app.service.produto_service import ProdutoService
 
 
 chat_bp = Blueprint("chat", __name__)
+
+
+@chat_bp.get("/")
+def index():
+    return render_template("chat.html")
+
+
+@chat_bp.get("/produtos")
+def produtos():
+    try:
+        catalogo = ProdutoService.listar_produtos()
+
+        opcoes = [
+            {
+                "id": produto["id"],
+                "nome": produto["nome"],
+                "categoria": produto["categoria"],
+            }
+            for produto in catalogo
+        ]
+
+        resposta = jsonify(produtos=opcoes)
+        resposta.headers["Cache-Control"] = "no-store"
+
+        return resposta
+
+    except Exception as exc:
+        current_app.logger.error(
+            "Falha ao listar produtos: %s",
+            type(exc).__name__,
+        )
+
+        return jsonify(
+            erro="Não foi possível carregar os produtos. Tente novamente."
+        ), 500
 
 
 @chat_bp.post("/chat")
@@ -35,34 +77,48 @@ def chat():
         ), 400
 
     try:
-        resposta = IAService.responder(mensagem)
+        historico = validar_historico(
+            dados.get("historico", [])
+        )
+
+    except ValueError:
+        return jsonify(
+            erro="Histórico inválido. Inicie uma nova conversa."
+        ), 400
+
+    try:
+        resposta = IAService.responder(
+            mensagem,
+            historico,
+        )
 
     except ValueError:
         current_app.logger.error(
-            "Falha na IA: verifique a configuração de OPENROUTER_API_KEY."
+            "Falha na IA: verifique OPENROUTER_API_KEY."
         )
 
         return jsonify(
-            erro="O serviço de IA não está configurado."
+            erro="O atendimento está indisponível no momento."
         ), 503
 
     except RuntimeError as exc:
-        current_app.logger.error("Falha na IA: %s", exc)
+        current_app.logger.error(
+            "Falha na IA: %s",
+            exc,
+        )
 
         return jsonify(
-            erro=(
-                "Não foi possível obter uma resposta da IA. "
-                "Tente novamente."
-            )
+            erro="Não foi possível responder agora. Tente novamente."
         ), 502
 
     except Exception as exc:
         current_app.logger.error(
-            "Falha no chat: %s", type(exc).__name__
+            "Falha no chat: %s",
+            type(exc).__name__,
         )
 
         return jsonify(
-            erro="Ocorreu um erro interno ao consultar a loja."
+            erro="Não foi possível consultar a loja. Tente novamente."
         ), 500
 
     return jsonify(resposta=resposta), 200
