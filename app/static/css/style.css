@@ -604,3 +604,24 @@ a:focus-visible,
     font-size: 10px;
   }
 }
+.tentar-novamente {
+  display: block;
+  margin-top: 12px;
+  padding: 9px 12px;
+  border: 1px solid #b78170;
+  border-radius: 6px;
+  color: #842f24;
+  background: white;
+  font-size: 12px;
+}
+
+.aviso-estoque {
+  grid-column: 1 / -1;
+  margin: 10px 0 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff0e9;
+  color: #842f24;
+  font-size: 12px;
+  line-height: 1.6;
+}

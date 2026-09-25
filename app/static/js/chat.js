@@ -11,6 +11,7 @@ const tituloSelecao = document.querySelector("#titulo-selecao");
 
 let ocupado = false;
 let historico = [];
+let pendente = null;
 
 
 function atualizarContador() {
@@ -44,7 +45,6 @@ function adicionarMensagem(texto, tipo) {
 
   const paragrafo = document.createElement("p");
 
-  // Mostra negrito sem interpretar HTML enviado pela IA.
   const partes = tipo === "assistente"
     ? texto.split(/(\*\*[^*]+\*\*)/g)
     : [texto];
@@ -68,6 +68,8 @@ function adicionarMensagem(texto, tipo) {
   mensagens.append(artigo);
 
   mensagens.scrollTop = mensagens.scrollHeight;
+
+  return artigo;
 }
 
 
@@ -136,12 +138,29 @@ async function enviar(mensagem, digitada = false) {
 
   mostrarMenu();
 
+  const repetindo = (
+    pendente &&
+    pendente.mensagem === mensagem
+  );
+
+  if (repetindo) {
+    // Mantém a pergunta original e remove o erro anterior.
+    pendente.erro.remove();
+  } else {
+    // Uma pergunta diferente encerra a tentativa anterior.
+    if (pendente) {
+      pendente.botao.remove();
+    }
+
+    adicionarMensagem(mensagem, "usuario");
+  }
+
+  pendente = null;
+
   definirEspera(
     true,
     "Consultando a loja. Aguarde um instante…"
   );
-
-  adicionarMensagem(mensagem, "usuario");
 
   try {
     const dados = await requisitar(form.dataset.url, {
@@ -168,7 +187,6 @@ async function enviar(mensagem, digitada = false) {
 
     adicionarMensagem(dados.resposta, "assistente");
 
-    // Guarda somente interações concluídas com sucesso.
     historico.push(
       {
         role: "user",
@@ -180,7 +198,6 @@ async function enviar(mensagem, digitada = false) {
       }
     );
 
-    // Mantém as últimas seis perguntas e respostas.
     historico = historico.slice(-12);
 
     if (digitada) {
@@ -189,12 +206,36 @@ async function enviar(mensagem, digitada = false) {
     }
 
   } catch (erro) {
-    adicionarMensagem(erro.message, "erro");
+    const aviso = adicionarMensagem(
+      erro.message,
+      "erro"
+    );
+
+    const tentar = document.createElement("button");
+    tentar.type = "button";
+    tentar.className = "tentar-novamente";
+    tentar.textContent = "Tentar novamente";
+
+    tentar.addEventListener("click", () => {
+      enviar(mensagem, digitada);
+    });
+
+    aviso.querySelector(".balao").append(tentar);
+
+    pendente = {
+      mensagem,
+      erro: aviso,
+      botao: tentar,
+    };
+
+    mensagens.scrollTop = mensagens.scrollHeight;
 
   } finally {
     definirEspera(false);
 
-    if (digitada) {
+    if (pendente) {
+      pendente.botao.focus();
+    } else if (digitada) {
       campo.focus();
     } else {
       menu.querySelector("button").focus();
@@ -249,10 +290,10 @@ async function escolherProduto(acao) {
       const nome = document.createElement("strong");
       nome.textContent = produto.nome;
 
-      const categoria = document.createElement("span");
-      categoria.textContent = produto.categoria;
+      const descricao = document.createElement("span");
+      descricao.textContent = produto.descricao;
 
-      botao.append(nome, categoria);
+      botao.append(nome, descricao);
 
       botao.addEventListener("click", () => {
         const perguntas = {
@@ -272,6 +313,21 @@ async function escolherProduto(acao) {
       });
 
       lista.append(botao);
+    }
+
+    if (
+      Array.isArray(dados.sem_estoque) &&
+      dados.sem_estoque.length
+    ) {
+      const aviso = document.createElement("p");
+      aviso.className = "aviso-estoque";
+
+      aviso.textContent =
+        "Sem estoque no momento: " +
+        dados.sem_estoque.join(", ") +
+        ".";
+
+      lista.append(aviso);
     }
 
     menu.hidden = true;
@@ -353,6 +409,7 @@ document.querySelector("#nova-conversa").addEventListener(
     }
 
     historico = [];
+    pendente = null;
     mensagens.replaceChildren();
 
     adicionarMensagem(
