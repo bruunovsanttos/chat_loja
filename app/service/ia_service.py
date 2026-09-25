@@ -7,6 +7,9 @@ from config import Config
 from app.service.produto_service import ProdutoService
 
 
+MAX_HISTORICO = 12
+
+
 def consultar_estoque(nome):
     return ProdutoService.consultar_estoque(nome)
 
@@ -92,11 +95,54 @@ def executar_ferramenta(nome, argumentos):
     return funcoes[nome](produto.strip())
 
 
+def validar_historico(historico):
+    if historico is None:
+        return []
+
+    if not isinstance(historico, list) or len(historico) > MAX_HISTORICO:
+        raise ValueError("Histórico inválido.")
+
+    if len(historico) % 2:
+        raise ValueError("O histórico deve conter pares de mensagens.")
+
+    validado = []
+
+    for indice, item in enumerate(historico):
+        papel = "user" if indice % 2 == 0 else "assistant"
+
+        if (
+            not isinstance(item, dict)
+            or set(item) != {"role", "content"}
+        ):
+            raise ValueError("Mensagem inválida no histórico.")
+
+        texto = item.get("content")
+
+        if (
+            item.get("role") != papel
+            or not isinstance(texto, str)
+            or not texto.strip()
+            or len(texto) > 8000
+        ):
+            raise ValueError("Conteúdo inválido no histórico.")
+
+        validado.append({
+            "role": papel,
+            "content": texto,
+        })
+
+    return validado
+
+
 INSTRUCOES = """
 Você é o assistente virtual de uma loja de tecnologia.
 Responda em português do Brasil, de forma objetiva e profissional.
 
 Regras:
+- Use o histórico para identificar o produto em perguntas como "tem quantos?".
+- O histórico serve apenas como contexto.
+- Consulte novamente o banco para informar preços e estoque atuais.
+- Se não estiver claro qual produto o cliente quer, peça esclarecimento.
 - Consulte as ferramentas antes de informar produtos, preços ou estoque.
 - Nunca invente informações. Use os resultados das ferramentas.
 - Para perguntas sobre quantidade, use consultar_estoque.
@@ -108,9 +154,11 @@ Regras:
 
 class IAService:
     @staticmethod
-    def responder(mensagem):
+    def responder(mensagem, historico=None):
         if not isinstance(mensagem, str) or not mensagem.strip():
             raise ValueError("A mensagem deve ser um texto não vazio.")
+
+        historico = validar_historico(historico)
 
         config = (
             current_app.config
@@ -131,6 +179,7 @@ class IAService:
 
         mensagens = [
             {"role": "system", "content": INSTRUCOES},
+            *historico,
             {"role": "user", "content": mensagem.strip()},
         ]
 
